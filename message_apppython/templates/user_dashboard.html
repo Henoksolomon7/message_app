@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat with Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f4; }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #3498db;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chat-header .avatar {
+            width: 40px;
+            height: 40px;
+            background: #2c3e50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .chat-header h2 {
+            font-size: 18px;
+        }
+        .chat-header .role-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+        }
+        .message.sent {
+            justify-content: flex-end;
+        }
+        .message.received {
+            justify-content: flex-start;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            position: relative;
+        }
+        .message.sent .message-bubble {
+            background: #3498db;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .message.received .message-bubble {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .message-time {
+            font-size: 11px;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+        .message.sent .message-time {
+            text-align: right;
+        }
+        .message-subject {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #ddd;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
+        }
+        .input-group button {
+            padding: 12px 25px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+        }
+        .input-group button:hover {
+            background: #2980b9;
+        }
+        .back-link {
+            color: white;
+            text-decoration: none;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 4px;
+        }
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .logout {
+            color: white;
+            text-decoration: none;
+            background: #e74c3c;
+            padding: 8px 15px;
+            border-radius: 4px;
+        }
+        .no-messages {
+            text-align: center;
+            color: #999;
+            padding: 50px;
+        }
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        .flash {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .flash.success { background: #d4edda; color: #155724; }
+        .flash.danger { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+                   <a href="{{ url_for('user_contacts') }}" style="background: #28a745; color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px;">
+            👥 Contacts
+        </a>
+            <h1>Chat Application</h1>
+              <div style="display: flex; gap: 10px;">
+            <span style="background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 4px;">
+                {{ current_user.username }}
+            </span>
+            <a href="{{ url_for('logout') }}" class="logout">Logout</a>
+        </div>
+          
+    </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+           
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="avatar">
+                    A
+                </div>
+                <div>
+                    <h2>Admin Support</h2>
+                    <span class="role-badge">ADMIN</span>
+                </div>
+            </div>
+            
+            <div class="messages" id="messages">
+                {% if received_messages or sent_messages %}
+                    <!-- Combine and sort all messages by time -->
+                    {% set all_messages = received_messages + sent_messages %}
+                    {% set sorted_messages = all_messages|sort(attribute='created_at') %}
+                    
+                    {% for msg in sorted_messages %}
+                        <div class="message {% if msg.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                            <div class="message-bubble">
+                                {% if msg.subject %}
+                                    <div class="message-subject">📌 {{ msg.subject }}</div>
+                                {% endif %}
+                                {{ msg.message }}
+                                <div class="message-time">
+                                    {{ msg.created_at.strftime('%H:%M %p, %b %d') }}
+                                    {% if msg.sender_id == current_user.id %}
+                                        {% if msg.is_read %}✓✓{% else %}✓{% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-messages">
+                        💬 No messages yet.<br>
+                        Send a message to start the conversation with Admin!
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="input-area">
+                <form method="POST">
+                    <div class="input-group">
+                        <input type="text" name="subject" placeholder="Subject..." style="flex: 0.3;" required>
+                        <input type="text" name="message" placeholder="Type your message..." required autocomplete="off">
+                        <button type="submit">Send →</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-scroll to bottom of messages
+        const messagesDiv = document.getElementById('messages');
+        if (messagesDiv) {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>
